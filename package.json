@@ -1,0 +1,10 @@
+{
+    "name": "abfnc",
+    "version": "0.0.1",
+    "private": true,
+    "dependencies": {
+		"keeptime": "^1.4.0",
+		"bignum": "^0.12.5"
+    },
+    "engine": "node ^4.0.0"
+}
