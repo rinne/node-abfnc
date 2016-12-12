@@ -3,7 +3,7 @@
 /*
  *  ABFNC
  *
- *  This is an implementation of arbitrary block size feistel network
+ *  This is an implementation of arbitrary block size Feistel network
  *  encryption using user selectable cryptographic hash functions as
  *  source of pseudo randomness in round functions.
  *

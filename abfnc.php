@@ -3,11 +3,11 @@
 /*
  *  ABFNC
  *
- *  This is an implementation of arbitrary block size feistel network
+ *  This is an implementation of arbitrary block size Feistel network
  *  encryption using user selectable cryptographic hash functions as
  *  source of pseudo randomness in round functions.
  *
- *  This PHPP implementation is functionally identical to Javascript
+ *  This PHP implementation is functionally identical to Javascript
  *  implementation that is distributed alongside with this one.
  *
  *  See README.md
@@ -89,7 +89,7 @@ class ArbitraryBlockFeistelHashCipher {
       trigger_error('Cipher in error state', E_USER_NOTICE);
       return FALSE;
     }
-    return $this->feistel(false, $input);
+    return $this->transform(false, $input);
   }
 
   public function decrypt($input) {
@@ -97,23 +97,23 @@ class ArbitraryBlockFeistelHashCipher {
       trigger_error('Cipher in error state', E_USER_NOTICE);
       return FALSE;
     }
-    return $this->feistel(true, $input);
+    return $this->transform(true, $input);
   }
 
-  public function encryptNum($input) {
+  public function encryptNum($input, $returnArray = FALSE) {
     if ($this->error) {
       trigger_error('Cipher in error state', E_USER_NOTICE);
       return FALSE;
     }
-    return $this->feistelNum(false, $input);
+    return $this->transformNum(false, $input, $returnArray);
   }
 
-  public function decryptNum($input) {
+  public function decryptNum($input, $returnArray = FALSE) {
     if ($this->error) {
       trigger_error('Cipher in error state', E_USER_NOTICE);
       return FALSE;
     }
-    return $this->feistelNum(true, $input);
+    return $this->transformNum(true, $input, $returnArray);
   }
 
   private function validArr($a) {
@@ -282,7 +282,7 @@ class ArbitraryBlockFeistelHashCipher {
     return $r;
   }
 
-  private function feistel($decrypt, $input) {
+  private function transform($decrypt, $input) {
     if (is_string($input)) {
       $input = $this->rs2a($input);
     }
@@ -330,21 +330,25 @@ class ArbitraryBlockFeistelHashCipher {
     }
   }
 
-  private function feistelNum($decrypt, $input) {
-    if (empty($this->blockLengthBits)) {
-      trigger_error('Numeric block without fixed block size', E_USER_NOTICE);
-      return FALSE;
+  private function transformNum($decrypt, $input, $returnArray = FALSE) {
+    if ($this->validArr($input)) {
+      $b = $input;
+    } else {
+      if (empty($this->blockLengthBits)) {
+	trigger_error('Numeric block without fixed block size', E_USER_NOTICE);
+	return FALSE;
+      }
+      $b = $this->i2a($input, $this->blockLengthBits);
+      if ($b === FALSE) {
+	trigger_error('Invalid input', E_USER_NOTICE);
+	return FALSE;
+      }
     }
-    $b = $this->i2a($input, $this->blockLengthBits);
-    if ($b === FALSE) {
-      trigger_error('Invalid input', E_USER_NOTICE);
-      return FALSE;
-    }
-    $b = $this->feistel($decrypt, $b);
+    $b = $this->transform($decrypt, $b);
     if (empty($b)) {
       return FALSE;
     }
-    return $this->a2i($b);
+    return ($returnArray ? $b : $this->a2i($b));
   }
 
 };
