@@ -13,7 +13,7 @@ const ArbitraryBlockFeistelHashCipher = require('./abfnc.js');
 });
 */
 
-var bits = 16;
+var bits = 15;
 var x = new ArbitraryBlockFeistelHashCipher('foo', 'md5', 24, bits);
 var i;
 const KeepTime = require('keeptime');

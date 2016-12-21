@@ -91,19 +91,23 @@ function a2i(arr) {
 }
 
 function b2a(buf) {
-	if (! (Buffer.isBuffer(buf) && (buf.length >= 4))) {
+	if (! (Buffer.isBuffer(buf) && (buf.length >= 8))) {
 		return undefined;
 	}
-	var bits = buf.readUInt32BE(0);
-	if ((Math.ceil(bits / 8) + 4) != buf.length) {
+	var zero = buf.readUInt32BE(0);
+	var bits = buf.readUInt32BE(4);
+	if (zero != 0) {
+		return undefined;
+	}
+	if ((Math.ceil(bits / 8) + 8) != buf.length) {
 		return undefined;
 	}
 	var i, rv = [];
-	for (i = 0; i < ((buf.length - 4) * 8); i++) {
+	for (i = 0; i < ((buf.length - 8) * 8); i++) {
 		if (i < bits) {
-			rv.push((buf[(i >> 3) + 4] >> (7 - (i & 7))) & 1);
+			rv.push((buf[(i >> 3) + 8] >> (7 - (i & 7))) & 1);
 		} else {
-			if ((buf[(i >> 3) + 4] >> (7 - (i & 7))) & 1) {
+			if ((buf[(i >> 3) + 8] >> (7 - (i & 7))) & 1) {
 				return undefined;
 			}
 		}
@@ -115,11 +119,12 @@ function a2b(arr) {
 	if (! (Array.isArray(arr))) {
 		return undefined;
 	}
-	var i, rv = Buffer.alloc(Math.ceil(arr.length / 8) + 4);
-	rv.writeUInt32BE(arr.length, 0);
+	var i, rv = Buffer.alloc(Math.ceil(arr.length / 8) + 8);
+	rv.writeUInt32BE(0, 0);
+	rv.writeUInt32BE(arr.length, 4);
 	for (i = 0; i < arr.length; i++) {
 		if (arr[i] === 1) {
-			rv[(i >> 3) + 4] |= (1 << (7 - (i & 7)));
+			rv[(i >> 3) + 8] |= (1 << (7 - (i & 7)));
 		} else if (arr[i] !== 0) {
 			return undefined;
 		}
@@ -144,8 +149,9 @@ function uint2b(n) {
 	if (! Number.isSafeInteger(n) && (n >= 0) && (n <= 0xffffffff)) {
 		return undefined;
 	}
-	var rv = Buffer.alloc(4);
-	rv.writeUInt32BE(n, 0);
+	var rv = Buffer.alloc(8);
+	rv.writeUInt32BE(0, 0);
+	rv.writeUInt32BE(n, 4);
 	return rv;
 }
 

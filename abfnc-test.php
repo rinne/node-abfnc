@@ -20,11 +20,14 @@ function hd($s) {
   }
 }
 
+$uint64max = bcsub(bcpow("2","64"),"1");
+
 function uuidGen($n, $key) {
+  global $uint64max;
   if (! ((is_int($n) && ($n > 0)) || (is_string($n) && preg_match('/^(0|([1-9][0-9]*))$/', $n)))) {
     return false;
   }
-  if (bccomp((string)$n, '18446744073709551615') > 0) {
+  if (bccomp((string)$n, $uint64max) > 0) {
     return false;
   }
   $c = new ArbitraryBlockFeistelHashCipher($key, NULL, NULL, 122);
@@ -47,6 +50,7 @@ function uuidGen($n, $key) {
 }
 
 function uuidCheck($u, $key) {
+  global $uint64max;
   $m = null;
   if (! (is_string($u) && preg_match('/^([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])-([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])-(4)([0-9a-f])([0-9a-f])([0-9a-f])-([89ab])([0-9a-f])([0-9a-f])([0-9a-f])-([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])$/', $u, $m))) {
     return false;
@@ -83,7 +87,7 @@ function uuidCheck($u, $key) {
   $r = array_merge(array_slice($r, 0, 48), array_slice($r, 52, 12), array_slice($r, 66));
   $c = new ArbitraryBlockFeistelHashCipher($key, NULL, NULL, 122);
   $r = $c->decryptNum($r);
-  if (bccomp((string)$r, '18446744073709551615') > 0) {
+  if (bccomp((string)$r, $uint64max) > 0) {
     return false;
   }
   return $r;
@@ -95,7 +99,9 @@ for ($i = 0; $i < 100; $i++) {
   $c = uuidCheck($u, 'foo');
   printf("%s -> %s -> %s\n", $i, $u, $c);
 }
+*/
 
+/*
 foreach(['18446744073709551614', '18446744073709551615', '18446744073709551616'] as $i) {
   $u = uuidGen($i, 'foo');
   $c = uuidCheck($u, 'foo');
@@ -156,7 +162,7 @@ foreach(['secret', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.', '
 }
 */
 
-$bits = 16;
+$bits = 15;
 $c = new ArbitraryBlockFeistelHashCipher('foo', 'md5', 24, $bits);
 for ($x = 0; $x < min(100, (1 << $bits)); $x++) {
   $y = $c->encryptNum($x);

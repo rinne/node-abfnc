@@ -202,7 +202,7 @@ class ArbitraryBlockFeistelHashCipher {
       trigger_error('Invalid binary array', E_USER_NOTICE);
       return FALSE;
     }
-    for ($i = 0, $s = pack('N', count($a)), $c = 0, $p = false; $i < count($a); $i++) {
+    for ($i = 0, $s = pack('NN', 0, count($a)), $c = 0, $p = false; $i < count($a); $i++) {
       if (! (($a[$i] === 0) || ($a[$i] === 1))) {
 	trigger_error('Invalid binary array', E_USER_NOTICE);
 	return FALSE;
@@ -228,21 +228,25 @@ class ArbitraryBlockFeistelHashCipher {
       trigger_error('Invalid binary buffer format', E_USER_NOTICE);
       return FALSE;
     }
-    $z = unpack('N', $s);
-    $z = $z[1];
-    if (strlen($s) < (4 + (int)(ceil($z / 8)))) {
+    $z = unpack('Nzero/Nbits', $s);
+    if ($z['zero'] != 0) {
+      trigger_error('Huge binary buffer length', E_USER_NOTICE);
+      return FALSE;
+    }
+    $z = $z['bits'];
+    if (strlen($s) < (8 + (int)(ceil($z / 8)))) {
       trigger_error('Invalid binary buffer length', E_USER_NOTICE);
       return FALSE;
     }
   
     for ($i = 0; $i < $z; $i++) {
-      $r[] = (ord(substr($s, ($i >> 3) + 4, 1)) >> (7 - ($i & 7))) & 1;
+      $r[] = (ord(substr($s, ($i >> 3) + 8, 1)) >> (7 - ($i & 7))) & 1;
     }
     return $r;
   }
 
   private function rs2a($buf) {
-    return $this->s2a(pack('N', strlen($buf) << 3) . $buf);
+    return $this->s2a(pack('NN', 0, strlen($buf) << 3) . $buf);
   }
 
   private function axor($a, $b) {
@@ -262,7 +266,7 @@ class ArbitraryBlockFeistelHashCipher {
   }
 
   private function skh($d, $bits) {
-    $b = $this->a2s($this->rs2a($this->hashAlgorithm)) . pack('N', $bits);
+    $b = $this->a2s($this->rs2a($this->hashAlgorithm)) . pack('NN', 0, $bits);
     for ($i = 0, $h = '', $buf = ''; strlen($buf) * 8 < $bits; $i++) {
       $c = @hash_init($this->hashAlgorithm);
       if (empty($c)) {
@@ -272,13 +276,13 @@ class ArbitraryBlockFeistelHashCipher {
       hash_update($c, $b);
       hash_update($c, $d);
       if ($i > 0) {
-	hash_update($c, pack('N', $i));
+	hash_update($c, pack('NN', 0, $i));
 	hash_update($c, $h);
       }
       $h = hash_final($c, true);
       $buf .= $h;
     }
-    $r = $this->s2a(pack('N', $bits) . $buf); 
+    $r = $this->s2a(pack('NN', 0, $bits) . $buf); 
     return $r;
   }
 
@@ -305,7 +309,7 @@ class ArbitraryBlockFeistelHashCipher {
       $blockBits = $this->blockLengthBits;
       $leftHalfBlockBits = $this->leftHalfBlockBits;
     }
-    $key = $this->key . pack('NNN', $blockBits, $leftHalfBlockBits, $this->rounds);
+    $key = $this->key . pack('NNNNNN', 0, $blockBits, 0, $leftHalfBlockBits, 0, $this->rounds);
     if ($decrypt) {
       $r = array_slice($input, 0, $leftHalfBlockBits);
       $l = array_slice($input, $leftHalfBlockBits);
@@ -314,7 +318,7 @@ class ArbitraryBlockFeistelHashCipher {
       $r = array_slice($input, $leftHalfBlockBits);
     }
     for ($i = 0; $i < $this->rounds; $i++) {
-      $tmp = $this->skh($key . pack('N', ($decrypt ? ($this->rounds - $i - 1) : $i)) . $this->a2s($r), count($l));
+      $tmp = $this->skh($key . pack('NN', 0, ($decrypt ? ($this->rounds - $i - 1) : $i)) . $this->a2s($r), count($l));
       if (empty($tmp)) {
 	trigger_error('Subkey hashing failed', E_USER_NOTICE);
 	return FALSE;
