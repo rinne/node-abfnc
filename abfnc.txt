@@ -1,0 +1,214 @@
+1. Introduction
+===============
+
+The objective of the exercise is to produce a secure encryption
+algorithm that has following properties:
+
+    a) It is a block cipher.
+
+    b) It accepts arbitrary length key.
+
+    c) It has a block length of arbitrary number of bits.
+
+
+2. Encodings
+============
+
+For data processing, a small number of methods to encode sequences of
+bits as byte buffers and vice versa is needed. Also encoding integers
+to bytes is needed.
+
+2.1 Integer Encoding
+--------------------
+
+All integers are encoded to bytes as 64 bit (8 byte) representation
+using most significant bit first byte order (i.e. big endian).
+
+Examples
+
+0 ->
+
+ 0   1   2   3   4   5   6   7
+ 0   0   0   0   0   0   0   0
+
+1 ->
+
+ 0   1   2   3   4   5   6   7
+ 0   0   0   0   0   0   0   1
+
+0xffffffff ->
+
+ 0   1   2   3   4   5   6   7
+ 0   0   0   0  255 255 255 255
+
+0xfffefdfcfbfaf9f8 ->
+
+ 0   1   2   3   4   5   6   7
+255 254 253 252 251 250 249 248
+
+If implementation never accepts integers over some fixed limit, it
+MUST still verify that the bits that are over accepted range are set
+to zero when decoding data.  For example an implementation expecting
+only integers in range 0..2^32 can read the input integer from bytes
+4..7 but MUST also verify that bytes 0..3 are set to zero.
+
+2.2 Bitstring Encoding
+----------------------
+
+Sequence of bits is encoded to a byte buffer as follows.
+
+- First 8 bytes of the string is 64 bits representation of number of
+  bits in the sequence (= len) as in 2.1.
+- Length of the byte buffer is exactly 8 + ceil(len / 8).
+- Each bit in the sequence is encoded to the buffer so that the most
+  significant bit of each byte is used first.
+- Left-over bits, if present, in the last byte MUST be filled with zero.
+
+Examples
+
+
+ [] ->
+
+  0   1   2   3   4   5   6   7
+  0   0   0   0   0   0   0   0
+
+ [1] ->
+
+  0   1   2   3   4   5   6   7   8
+  0   0   0   0   0   0   0   1  128
+
+ [1,1,1,1,1,1,1,1] ->
+
+  0   1   2   3   4   5   6   7   8
+  0   0   0   0   0   0   0   8  255
+
+ [0,0,0,0,0,0,0,0] ->
+
+  0   1   2   3   4   5   6   7   8
+  0   0   0   0   0   0   0   8   0
+
+ [1,1,1,1,1,1,1,1,1] ->
+
+  0   1   2   3   4   5   6   7   8   9
+  0   0   0   0   0   0   0   9  255 128
+
+ [0,0,0,0,0,0,0,0,0] ->
+
+  0   1   2   3   4   5   6   7   8   9
+  0   0   0   0   0   0   0   9   0   0
+
+- It is implementation dependent, how long bit sequences each
+  implementation can handle, but encoding does not depend on that.
+
+
+2.3 Character String Encoding
+-----------------------------
+
+Arbitrary sequence of bytes (especially character strings) is
+represented as a byte buffer simply by adding a 8 byte length field in
+the beginning of the string. The length is always in bits, so it's
+eight times the number of bytes in the string. In case of strings of
+writable characters, the character encoding is expected to be UTF-8.
+
+Examples
+
+"foo" ->
+
+  0   1   2   3   4   5   6   7   8   9   10
+  0   0   0   0   0   0   0   24 102 111 111
+
+"123€" ->
+
+  0   1   2   3   4   5   6   7   8   9   10  11  12  13
+  0   0   0   0   0   0   0   48  49  50  51 226 130 172
+
+
+3. Hashing
+==========
+
+In order to handle arbitrary block lengths, a hash function processing
+an input of arbitrary number of bits to an output of arbitrary number
+of bits. The algorighm below is used for producing such hash function
+using traditional hash function producing a fixed length output.
+
+3.1 Arbitrary Length Hash
+-------------------------
+
+Hashing is based on proven cryptographically strong hash
+functions. They are tuned in order to produce an output of exactly
+given number of bits where hash length in bits can be one bit or
+larger. Theoretical maximum limit is 2^64 bits but in practise hashes
+produced are much smaller, typically from a few bits up to a few
+thousand bits.
+
+Underlying hash function can in principle be any traditional hash
+function producing a fixed length hash value from arbitrary sequence
+of bytes. Examples of such functions are MD5, SHA-1, SHA-256, and
+SHA-512.
+
+The design principle is that hashes that are produced using this
+algorithm must be at least as strong as hash produced with the
+underlying hash function, given that the output hash length is at
+least as long as the output length of the underlying hash function. In
+case of a shorter output length, the strength of the algorithm in
+general and collision probability in particular is reduced
+accordingly. It is also noteworthy, that if the underlying hash
+function is not cryptographically secure, producing very large output
+hashes using that, may in some cases produce weaker cryptographic
+properties than the underlying algorithm itself.
+
+The hashing is performed as follows.
+
+- Let the output hash length in bits be denoted as 'len' (e.g. 42).
+
+- Let the underlying hash function be denoted as 'hash' (e.g. MD5,
+  with a well known identity name "md5")
+
+- Let the arbitrary length input sequence of bytes to be hashed
+  denoted as "data". Typically "data" is a bitstring encoded to a byte
+  buffer as described above, but this is not a strict
+  requirement. However this allows also the input to be not only
+  arbitrary number of bytes, but effectively also arbitrary number of
+  bits.
+
+- Calculate a sufficient amount of hash output data using following
+  algorithm:
+
+      B = (well_known_hash_name_encoded_as_in_2.3 +
+           len_encoded_as_8_bytes_msb_first)
+      N = 0
+      WHILE length_of_H_in_bytes * 8 < len DO
+        IF N == 0 THEN
+          P = hash(B + data)
+          H = P
+        ELSE
+          P = hash(B + data + N_encoded_as_8_bytes_msb_first + P)
+          H = H + P
+        ENDIF
+      ENDWHILE
+  
+- Convert H to an output bit sequence of exactly len bits in order
+  from beginning. The first bit from each byte is the most significat
+  bit (i.e. '127 bit') and the last is the least significant bit (i.e.
+  '1 bit'). Bits are extracted in order from each byte until the
+  required number of bits is reached.
+
+- Ignore the rest of the bytes and possibly the unused part of the
+  last byte from H.
+
+- If needed, the hash output bit sequence can in turn be encoded to a
+  buffer of bytes as described in 2.2.
+
+- Well known names for some hash algorithms are as follows.
+
+
+        algorithm     | w.k.n
+    ------------------+-------
+    MD5 [RFC1321]     | md5
+    SHA-1 [RFC3174]   | sha1
+    SHA-256 [RFC6234] | sha256
+    SHA-512 [RFC6234] | sha512
+
+
+4. Encryption
+=============
