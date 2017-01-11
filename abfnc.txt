@@ -213,4 +213,5 @@ The hashing is performed as follows.
 4. Encryption
 =============
 
-Encryption is implemented as a generic Feistel network using cryptographic.
+Encryption is implemented as a generic Feistel network using
+cryptographic hash function (see 3.1) as a round function.
