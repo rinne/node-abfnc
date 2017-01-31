@@ -1,10 +1,35 @@
 {
     "name": "abfnc",
-    "version": "0.0.1",
-    "private": true,
+	"version": "0.9.0",
+	"description": "Arbitrary block length encryption of integers and binary data.",
+	"main": "abfnc.js",
     "dependencies": {
 		"keeptime": "^1.4.0",
 		"bignum": "^0.12.5"
     },
-    "engine": "node ^4.0.0"
+	"scripts": {
+        "test": "node ./test/test.js"
+	},
+	"engines": {
+		"node": ">=4.0.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/rinne/node-abfnc.git"
+	},
+	"keywords": [
+		"encryption",
+		"cipher",
+		"feistel"
+	],
+	"author": {
+		"name": "Timo J. Rinne",
+		"email": "tri@iki.fi",
+		"url": "https://github.com/rinne/"
+	},
+	"license": "GPL-2.0",
+	"bugs": {
+		"url": "https://github.com/rinne/node-abfnc/issues"
+	},
+	"homepage": "https://github.com/rinne/node-abfnc#readme"
 }
